@@ -1,3 +1,6 @@
+// 
+//
+// 
 use redis::Commands;
 
 fn main() {
@@ -24,59 +27,50 @@ fn main() {
 }
 
 fn redis_test () {
-    // let mut client = match redis::Client::open("redis://localhost:6379/") {
-    //         Ok(client) => {
-    //             match client.get_connection_with_timeout(std::time::Duration::from_secs(5)) {
-    //                 Ok(conn) => conn,
-    //                 Err(e) => {
-    //                     println!("Failed to connect to Redis: {e}");
-    //                     return;
-    //                 }
-    //             }
-    // }        Err(e) => {
-    //         println!("Failed to create Redis client: {e}");
-    //         return;
-    //     }
-    // };
-
-    let conn: redis::Connection;
-    let mut client =  redis::Client::open("redis://localhost:6379/");
-    match (client) {
-            Ok(client) => {
-                conn = client.get_connection_with_timeout(std::time::Duration::from_secs(5));
-                match client.get_connection_with_timeout(std::time::Duration::from_secs(5)) {
-                    Ok(conn) => conn,
-                    Err(e) => {
-                        println!("Failed to connect to Redis: {e}");
-                        return;
-                    }
-                }
-    }        Err(e) => {
+    let open_result =  redis::Client::open("redis://localhost:6379/");
+    let my_client: redis::Client;
+    match open_result {
+        Ok(client) => {
+            println! ("Successfully created Redis client");
+            my_client = client;
+        },
+        Err(e) => {
             println!("Failed to create Redis client: {e}");
             return;
         }
     };
 
-    // if let Ok(res) = client.set("user_session:100", "active") {
-    //         let res: String = res;
-    //         println!("{res}");    // >>> OK
-    //     } else {
-    //         println!("Error setting foo");
-    //     }
+    let mut my_conn: redis::Connection;
+    let conn_result: redis::RedisResult<redis::Connection>;
+    conn_result = my_client.get_connection_with_timeout(std::time::Duration::from_secs(5));
+    match conn_result {
+        Ok(conn) => {
+            println!("Successfully connected to Redis");
+            my_conn = conn;
+        },
+        Err(e) => {
+            println!("Failed to connect to Redis: {e}");
+            return;
+        }
+    };
 
-    // Try to get a value using the connection
-    let mut value: String = conn.get::<_, String>("user_session:100");
-    match conn.get::<_, String>("user_session:100") {
-        Ok(status) => println!("Session Status: {}", status),
-        Err(e) => println!("Error retrieving session status: {}", e),
+    let mut get_value: String = "uninitialized".to_string();
+    let get_result: redis::RedisResult<String>;
+    get_result = my_conn.get::<&str, String>("name");
+    // match my_conn.get::<&str, String>("name") {
+    match get_result {
+        Ok(value) => {
+            // println!("Value for 'name': {}", value);
+            get_value = value;
+            // println!("get_value for 'name': {}", get_value);
+        },
+        Err(_) => println!("Key 'Elliot' not found"),
+    };
+
+    if get_value == "Elliot" {
+        println!("Value for 'name' is Elliot");
+    } else {
+        println!("Value for 'name' is not Elliot");
     }
-
-
-    // // Execute a GET command and read the result into a String
-    // let status: String = con.get("user_session:100").unwrap();
-    // match client.get ("user_session:100") {
-    //     Ok(status) => println!("Session Status: {}", status),
-    //     Err(e) => println!("Error retrieving session status: {}", e),
-    // }
+        
 }
-
