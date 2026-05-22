@@ -1,32 +1,36 @@
+use std::thread::sleep;
+
 // 
 //
 // 
-use redis::Commands;
+use redis::{Commands};
 
 fn main() {
-    println!("Hello, world!");
-
-    let i: i32 = 42;
-    println!("The value of i is: {}", i);
-
-    let f: f64 = 3.14;
-    println!("The value of f is: {}, {}", i, f);
-
-    let b: i32 = i;
-    println!("The value of b is: {}", b);
-    println!("The value of i is: {}", i);
-
-    let mut ys: [i32; 500] = [0; 500];
-
-    for _i in 0..500 {
-        ys[_i] = _i as i32;
-    }
-    println!("The value of ys[1] is: {}", ys[499]);
+    println!("Application started!");
 
     redis_test();
+
+    println! ("Application finished!");
 }
 
 fn redis_test () {
+
+    // let mut result: redis::Connection = match redis::Client::open("redis://localhost:6379/") {
+    //     Ok(client) => {
+    //         match client.get_connection() {
+    //             Ok(conn) => conn,
+    //             Err(e) => {
+    //                 println!("Failed to connect to Redis: {e}");
+    //                 return;
+    //             }
+    //         }
+    //     },
+    //     Err(e) => {
+    //         println!("Failed to create Redis client: {e}");
+    //         return;
+    //     }
+    // };
+    
     let open_result =  redis::Client::open("redis://localhost:6379/");
     let my_client: redis::Client;
     match open_result {
@@ -54,23 +58,37 @@ fn redis_test () {
         }
     };
 
-    let mut get_value: String = "uninitialized".to_string();
-    let get_result: redis::RedisResult<String>;
-    get_result = my_conn.get::<&str, String>("name");
-    // match my_conn.get::<&str, String>("name") {
-    match get_result {
-        Ok(value) => {
-            // println!("Value for 'name': {}", value);
-            get_value = value;
-            // println!("get_value for 'name': {}", get_value);
-        },
-        Err(_) => println!("Key 'Elliot' not found"),
-    };
+    let res: bool = redis_set(&mut my_conn, "name", "Elliot Rusty");
+    println!("Result of set is {}", res);
 
-    if get_value == "Elliot" {
-        println!("Value for 'name' is Elliot");
-    } else {
-        println!("Value for 'name' is not Elliot");
+    let my_value: Option<String> = redis_get(&mut my_conn, "name");
+    println!("Key 'name' found in Redis and value is {} ", my_value.unwrap_or("Something went wrong".to_string()));
+    // if my_value.is_some() {
+    //     let local_value: String = my_value.clone().unwrap();
+    //     println!("Key 'name' found in Redis and value is {} ", my_value.unwrap_or("Something went wrong".to_string()));
+    // }
+
+    for i in 0..100 {
+        sleep(std::time::Duration::from_secs(10));
+        let new_value: String = format!("{} - Elliot Rusty", i);
+        redis_set(&mut my_conn, "name", &new_value);
     }
-        
+}
+
+fn redis_get (conn: &mut redis::Connection, key: &str) -> Option<String> {
+    let get_result: redis::RedisResult<String>;
+    get_result = conn.get::<&str, String>(key);
+    match get_result {
+        Ok(value) => Some(value),
+        Err(_) => None,
+    }
+}
+
+fn redis_set (conn: &mut redis::Connection, key: &str, value: &str) -> bool {
+    let set_result: redis::RedisResult<()>;
+    set_result = conn.set::<&str, &str, ()>(key, value);
+    match set_result {
+        Ok(_) => true,
+        Err(_) => false,
+    }
 }
